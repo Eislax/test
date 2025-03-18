@@ -30,94 +30,6 @@ def load_data():
 
 all_data = load_data()
 
-if not all_data.empty:
-    # Proses data
-    all_data['order_month'] = all_data['order_purchase_timestamp'].dt.to_period('M')
-    monthly_sales = all_data.groupby('order_month').size().reset_index()
-    monthly_sales.columns = ['month_year', 'order_count']
-    
-    # Streamlit UI
-    st.title("Tren Penjualan Bulanan")
-    
-    # Menampilkan total pesanan bulanan
-    total_monthly_order = monthly_sales["order_count"].sum()
-    st.markdown(f"Total Monthly Orders: **{total_monthly_order}**")
-    
-    # Plot
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(
-        monthly_sales["month_year"].astype(str), 
-        monthly_sales["order_count"], 
-        marker='o', 
-        linewidth=2, 
-        color="#068DA9"
-    )
-    
-    # Tambahkan label jumlah di setiap titik
-    for i, txt in enumerate(monthly_sales["order_count"]):
-        ax.annotate(txt, (monthly_sales["month_year"].astype(str)[i], monthly_sales["order_count"][i]), 
-                    textcoords="offset points", xytext=(0,5), ha='center', fontsize=10)
-    
-    ax.set_title("Jumlah Pemesanan per Bulan", fontsize=16)
-    ax.set_xlabel("Bulan", fontsize=12)
-    ax.set_ylabel("Jumlah Pemesanan", fontsize=12)
-    ax.tick_params(axis="x", rotation=45, labelsize=10)
-    ax.tick_params(axis="y", labelsize=10)
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
-    
-    # Tampilkan plot di Streamlit
-    st.pyplot(fig)
-    
-    # --- Review Score ---
-    st.subheader("Distribusi Rating Customer")
-    
-    if 'review_score' in all_data.columns:
-        review_scores = all_data['review_score'].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
-        max_count = review_scores.max()
-        top_ratings = review_scores[review_scores == max_count].index.tolist()
-        colors = ["#B0C4DE", "#A0B6D8", "#8FA9D1", "#6E94C9", "#3A71B4"]
-        
-        fig, ax = plt.subplots(figsize=(10, 5))
-        sns.barplot(x=review_scores.index, y=review_scores.values, order=[1, 2, 3, 4, 5], palette=colors)
-        
-        for i, v in enumerate(review_scores.values):
-            ax.text(i, v + 50, str(v), ha='center', fontsize=12)
-        
-        ax.set_title("Distribusi Rating Customer untuk Pelayanan E-Commerce", fontsize=15)
-        ax.set_xlabel("Rating", fontsize=12)
-        ax.set_ylabel("Jumlah Customer", fontsize=12)
-        ax.grid(axis='y', linestyle='--', alpha=0.7)
-        
-        st.pyplot(fig)
-    else:
-        st.warning("Kolom 'review_score' tidak ditemukan dalam dataset.")
-    
-    # --- Heatmap Geolocation ---
-    st.subheader("Heatmap Lokasi Pelanggan")
-    
-    try:
-        geolocation = pd.read_csv("data/geolocation.csv")
-        geolocation_silver = geolocation.groupby(
-            ['geolocation_zip_code_prefix', 'geolocation_city', 'geolocation_state']
-        )[['geolocation_lat', 'geolocation_lng']].median().reset_index()
-        
-        customers_silver = all_data.merge(
-            geolocation_silver,
-            left_on='customer_zip_code_prefix',
-            right_on='geolocation_zip_code_prefix',
-            how='inner'
-        )
-        
-        heat_data = customers_silver[['geolocation_lat', 'geolocation_lng']].values.tolist()
-        m = folium.Map(location=[-14.2350, -51.9253], zoom_start=4)
-        HeatMap(heat_data, radius=10).add_to(m)
-        
-        folium_static(m)
-    except FileNotFoundError:
-        st.error("File geolocation.csv tidak ditemukan. Pastikan file tersedia di direktori kerja.")
-else:
-    st.warning("Tidak ada data untuk ditampilkan.")
-
 
 # Menentukan tanggal analisis
 max_date = all_data['order_purchase_timestamp'].max() + timedelta(days=1)
@@ -582,6 +494,94 @@ with tabs[4]:
         if 'High' in filtered_rfm['churn_risk'].values:
             high_risk = filtered_rfm[filtered_rfm['churn_risk'] == 'High'].shape[0]
             st.warning(f"⚠️ Terdapat {high_risk} pelanggan dengan risiko churn tinggi. Perlu tindakan segera untuk kampanye retensi.")
+
+if not all_data.empty:
+    # Proses data
+    all_data['order_month'] = all_data['order_purchase_timestamp'].dt.to_period('M')
+    monthly_sales = all_data.groupby('order_month').size().reset_index()
+    monthly_sales.columns = ['month_year', 'order_count']
+    
+    # Streamlit UI
+    st.title("Tren Penjualan Bulanan")
+    
+    # Menampilkan total pesanan bulanan
+    total_monthly_order = monthly_sales["order_count"].sum()
+    st.markdown(f"Total Monthly Orders: **{total_monthly_order}**")
+    
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(
+        monthly_sales["month_year"].astype(str), 
+        monthly_sales["order_count"], 
+        marker='o', 
+        linewidth=2, 
+        color="#068DA9"
+    )
+    
+    # Tambahkan label jumlah di setiap titik
+    for i, txt in enumerate(monthly_sales["order_count"]):
+        ax.annotate(txt, (monthly_sales["month_year"].astype(str)[i], monthly_sales["order_count"][i]), 
+                    textcoords="offset points", xytext=(0,5), ha='center', fontsize=10)
+    
+    ax.set_title("Jumlah Pemesanan per Bulan", fontsize=16)
+    ax.set_xlabel("Bulan", fontsize=12)
+    ax.set_ylabel("Jumlah Pemesanan", fontsize=12)
+    ax.tick_params(axis="x", rotation=45, labelsize=10)
+    ax.tick_params(axis="y", labelsize=10)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Tampilkan plot di Streamlit
+    st.pyplot(fig)
+    
+    # --- Review Score ---
+    st.subheader("Distribusi Rating Customer")
+    
+    if 'review_score' in all_data.columns:
+        review_scores = all_data['review_score'].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
+        max_count = review_scores.max()
+        top_ratings = review_scores[review_scores == max_count].index.tolist()
+        colors = ["#B0C4DE", "#A0B6D8", "#8FA9D1", "#6E94C9", "#3A71B4"]
+        
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.barplot(x=review_scores.index, y=review_scores.values, order=[1, 2, 3, 4, 5], palette=colors)
+        
+        for i, v in enumerate(review_scores.values):
+            ax.text(i, v + 50, str(v), ha='center', fontsize=12)
+        
+        ax.set_title("Distribusi Rating Customer untuk Pelayanan E-Commerce", fontsize=15)
+        ax.set_xlabel("Rating", fontsize=12)
+        ax.set_ylabel("Jumlah Customer", fontsize=12)
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+        
+        st.pyplot(fig)
+    else:
+        st.warning("Kolom 'review_score' tidak ditemukan dalam dataset.")
+    
+    # --- Heatmap Geolocation ---
+    st.subheader("Heatmap Lokasi Pelanggan")
+    
+    try:
+        geolocation = pd.read_csv("data/geolocation.csv")
+        geolocation_silver = geolocation.groupby(
+            ['geolocation_zip_code_prefix', 'geolocation_city', 'geolocation_state']
+        )[['geolocation_lat', 'geolocation_lng']].median().reset_index()
+        
+        customers_silver = all_data.merge(
+            geolocation_silver,
+            left_on='customer_zip_code_prefix',
+            right_on='geolocation_zip_code_prefix',
+            how='inner'
+        )
+        
+        heat_data = customers_silver[['geolocation_lat', 'geolocation_lng']].values.tolist()
+        m = folium.Map(location=[-14.2350, -51.9253], zoom_start=4)
+        HeatMap(heat_data, radius=10).add_to(m)
+        
+        folium_static(m)
+    except FileNotFoundError:
+        st.error("File geolocation.csv tidak ditemukan. Pastikan file tersedia di direktori kerja.")
+else:
+    st.warning("Tidak ada data untuk ditampilkan.")
 
 st.markdown("---")
 st.caption("📌 Dashboard dibuat dengan Streamlit dan Plotly | Data: E-Commerce Public Dataset")
